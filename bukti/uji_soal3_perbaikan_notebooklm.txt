@@ -1,0 +1,48 @@
+$ psql -f soal3/supabase/05_uji_perbaikan_notebooklm.sql
+
+psql:soal3/supabase/06_seed_modal_awal.sql:10: WARNING:  SET CONSTRAINTS can only be used in transaction blocks
+=== UJI 1: Mutasi internal Bank -> Kas Kecil lewat voucher KAS KELUAR -> DITOLAK (bukan arus kas keluar)
+psql:soal3/supabase/05_uji_perbaikan_notebooklm.sql:10: ERROR:  Voucher kas KELUAR tidak boleh mendebit akun kas/setara kas (Kas Kecil). Gunakan rpc_create_cash_transfer untuk mutasi internal.
+=== UJI 2: Mutasi yang sama lewat rpc_create_cash_transfer -> BERHASIL (jenis MUTASI_KAS)
+ mutasi  
+---------
+ MK-0001
+(1 row)
+
+=== UJI 3: Penempatan deposito 3 bulan (setara kas) dari Bank -> BERHASIL sebagai MUTASI_KAS
+ mutasi  
+---------
+ MK-0002
+(1 row)
+
+=== UJI 4: Deposito > 3 bulan (1105) BUKAN setara kas -> mutasi DITOLAK
+psql:soal3/supabase/05_uji_perbaikan_notebooklm.sql:19: ERROR:  Mutasi kas hanya antar akun kas/setara kas (PSAK 207: bukan arus kas).
+=== UJI 5: Voucher kas keluar operasi dengan aktivitas eksplisit
+ aktivitas 
+-----------
+ OPERASI
+(1 row)
+
+=== SALDO KAS & SETARA KAS (cerukan bank terdeteksi bila saldo Bank negatif)
+ account_code |                account_name                |  category  |    saldo    |     penyajian      
+--------------+--------------------------------------------+------------+-------------+--------------------
+ 1101         | Kas                                        | KAS        |  5545000.00 | KAS_DAN_SETARA_KAS
+ 1102         | Bank                                       | KAS        | 13000000.00 | KAS_DAN_SETARA_KAS
+ 1103         | Kas Kecil                                  | KAS        |  2000000.00 | KAS_DAN_SETARA_KAS
+ 1104         | Setara Kas - Deposito Berjangka <= 3 Bulan | SETARA_KAS |  5000000.00 | KAS_DAN_SETARA_KAS
+(4 rows)
+
+=== ARUS KAS PER AKTIVITAS (MUTASI_KAS dikecualikan)
+      aktivitas      | arus_kas_bersih 
+---------------------+-----------------
+ OPERASI             |     -3000000.00
+ PENDANAAN           |     30000000.00
+ BELUM_DIKLASIFIKASI |     -1455000.00
+(3 rows)
+
+=== Integritas hash setelah perubahan skema
+ valid | total 
+-------+-------
+    13 |    13
+(1 row)
+

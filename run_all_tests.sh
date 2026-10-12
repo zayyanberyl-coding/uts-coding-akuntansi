@@ -30,4 +30,6 @@ DB="$DB" ./soal2/concurrency_demo.sh 2>&1 | grep -v "^NOTICE" | tee bukti/uji_so
 run soal3/supabase/01_audit_trail_immutability.sql
 run soal3/supabase/02_supabase_security.sql
 show soal3/supabase/03_uji_soal3.sql   | tee bukti/uji_soal3_audit_trail.txt
+run soal3/supabase/04_perbaikan_hasil_notebooklm.sql
+show soal3/supabase/05_uji_perbaikan_notebooklm.sql | tee bukti/uji_soal3_perbaikan_notebooklm.txt
 echo "SELESAI - lihat folder bukti/"

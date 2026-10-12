@@ -81,6 +81,13 @@
           <label class="text-sm md:col-span-2">Deskripsi / Dibayarkan kepada
             <input id="description" type="text" placeholder="mis. Pembayaran listrik kantor Oktober kepada PLN" class="mt-1 w-full border border-line rounded px-3 py-2" />
           </label>
+          <label class="text-sm md:col-span-4">Aktivitas arus kas (PSAK 207)
+            <select id="activity" class="mt-1 w-full md:w-72 border border-line rounded px-3 py-2 bg-white">
+              <option value="OPERASI">Operasi (beban, gaji, pemasok)</option>
+              <option value="INVESTASI">Investasi (aset tetap, deposito &gt; 3 bulan)</option>
+              <option value="PENDANAAN">Pendanaan (pinjaman, prive/dividen)</option>
+            </select>
+          </label>
         </div>
 
         <div class="overflow-x-auto">
@@ -165,7 +172,8 @@
 const SUPABASE_URL = 'https://wvwjptppqxdlbqqtuaey.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Zh6fqHBgxbSNLaCRYJxcWA_uFKg5Grc';
 
-const KAS_CODES = ['1101', '1102', '1103'];       // Kas, Bank, Kas Kecil
+// Kas & setara kas (PSAK 207). 1104 = deposito <= 3 bulan sejak perolehan.
+const KAS_CODES = ['1101', '1102', '1103', '1104'];
 const rupiah = n => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0);
 const $ = id => document.getElementById(id);
 
@@ -194,7 +202,8 @@ function makeSupabaseBackend() {
     listAudit: () => call('rpc_list_audit_log', { p_limit: 40 }),
     verify: () => call('rpc_verify_journal_integrity'),
     createVoucher: v => call('rpc_create_cash_voucher', {
-      p_transaction_date: v.date, p_reference_no: v.ref, p_description: v.description, p_lines: v.lines }),
+      p_transaction_date: v.date, p_reference_no: v.ref, p_description: v.description, p_lines: v.lines,
+      p_activity: v.activity }),
     reverse: (id, reason) => call('rpc_reverse_journal', { p_header_id: id, p_reason: reason })
   };
 }
@@ -202,6 +211,7 @@ function makeSupabaseBackend() {
 function makeDemoBackend() {
   const accounts = [
     ['1101','Kas','DEBIT','ASET'], ['1102','Bank','DEBIT','ASET'], ['1103','Kas Kecil','DEBIT','ASET'],
+    ['1104','Setara Kas - Deposito Berjangka <= 3 Bulan','DEBIT','ASET'],
     ['1401','Sewa Dibayar di Muka','DEBIT','ASET'], ['2101','Utang Usaha','CREDIT','LIABILITAS'],
     ['2102','Utang Gaji','CREDIT','LIABILITAS'], ['6101','Beban Gaji','DEBIT','BEBAN'],
     ['6102','Beban Listrik, Air & Telepon','DEBIT','BEBAN'], ['6103','Beban Sewa','DEBIT','BEBAN'],
@@ -276,6 +286,7 @@ function resetForm() {
   $('trxDate').max = $('trxDate').value;
   $('refNo').value = defaultRef();
   $('description').value = '';
+  $('activity').value = 'OPERASI';
   lines = [emptyLine(), { account_code: '1101', debit: '', credit: '' }];
   renderLines();
 }
@@ -342,7 +353,7 @@ function validate() {
     ['Minimal 2 baris jurnal', filled.length >= 2],
     ['Setiap baris punya akun & nominal > 0 (tidak negatif)', filled.length > 0 && filled.every(l =>
         l.account_code && (cents(l.debit) > 0) !== (cents(l.credit) > 0) && cents(l.debit) >= 0 && cents(l.credit) >= 0)],
-    ['Akun Kas/Bank berada di sisi KREDIT (kas keluar)', cashLines.length > 0 && cashLines.every(l => cents(l.debit) === 0 && cents(l.credit) > 0)],
+    ['Akun Kas/Setara Kas berada di sisi KREDIT (kas keluar)', cashLines.length > 0 && cashLines.every(l => cents(l.debit) === 0 && cents(l.credit) > 0)],
     ['Total Debit = Total Kredit (zero-discrepancy)', totalD > 0 && totalD === totalC]
   ];
   return { totalD, totalC, rules, ok: rules.every(r => r[1]), payload: filled.map(l => ({
@@ -379,7 +390,7 @@ $('btnSubmit').addEventListener('click', async () => {
   $('btnSubmit').textContent = 'Menyimpan…';
   try {
     const r = await api.createVoucher({ date: $('trxDate').value, ref: $('refNo').value.trim(),
-      description: $('description').value.trim(), lines: v.payload });
+      description: $('description').value.trim(), lines: v.payload, activity: $('activity').value });
     showResult(true, `<b>Voucher ${r.reference_no} berhasil di-POSTED</b> oleh ${r.created_by}.<br>
       <span class="font-mono text-xs break-all">hash_checksum: ${r.hash_checksum}</span>`);
     resetForm();

@@ -6,10 +6,10 @@ $ psql -f soal3/supabase/03_uji_soal3.sql
  {                                                                                      +
      "id": 10,                                                                          +
      "total": 1000000.00,                                                               +
-     "created_at": "2026-10-12T19:34:33.947351+07:00",                                  +
-     "created_by": "zayyan.beryl@students.undip.ac.id",                                 +
+     "created_at": "2026-10-12T20:12:44.309858+07:00",                                  +
+     "created_by": "zayyan@demo.uts",                                                   +
      "reference_no": "BKK-2026-10-001",                                                 +
-     "hash_checksum": "c89785134b50571e632eddc8c86188bbdb6d1816b15138bca10c4e541071fdc2"+
+     "hash_checksum": "03b15b0b47386112a35926801caf069d0126c84a5ad7e7eba7a7cfa227ad9988"+
  }
 (1 row)
 
@@ -30,9 +30,9 @@ psql:soal3/supabase/03_uji_soal3.sql:41: ERROR:  Baris jurnal milik jurnal POSTE
 === UJI 8: TRUNCATE tabel jurnal -> DITOLAK
 psql:soal3/supabase/03_uji_soal3.sql:44: ERROR:  TRUNCATE pada tabel journal_lines dilarang (jejak audit).
 === UJI 9: Klien mencoba memalsukan created_by -> diabaikan, diisi server
- reference_no |            created_by             | created_at_hari_ini 
---------------+-----------------------------------+---------------------
- DRAFT-TES    | zayyan.beryl@students.undip.ac.id | t
+ reference_no |   created_by    | created_at_hari_ini 
+--------------+-----------------+---------------------
+ DRAFT-TES    | zayyan@demo.uts | t
 (1 row)
 
 === UJI 10: Koreksi lewat jurnal pembalik (storno) -> BERHASIL
@@ -42,7 +42,7 @@ psql:soal3/supabase/03_uji_soal3.sql:44: ERROR:  TRUNCATE pada tabel journal_lin
      "id": 15,                                                                          +
      "reversal_of": "BKK-2026-10-001",                                                  +
      "reference_no": "STORNO-BKK-2026-10-001",                                          +
-     "hash_checksum": "a2f6215c0ceac21fb66beff1c6f5a6dc00a0657df4e18f4f533e5dc8b50868d1"+
+     "hash_checksum": "fee725e839c52da1d6a99fbaf98bc4d917d2750717782beb3b3755aa6d614a72"+
  }
 (1 row)
 
@@ -71,15 +71,15 @@ psql:soal3/supabase/03_uji_soal3.sql:60: ERROR:  Jurnal BKK-2026-10-001 sudah pe
 === UJI 13: Verifikasi integritas seluruh jurnal POSTED (hash & rantai)
       reference_no      |   hash_tersimpan    | hash_dihitung_ulang | hash_valid | chain_valid 
 ------------------------+---------------------+---------------------+------------+-------------
- JU-0001                | bfe6c1ce61ce321c... | bfe6c1ce61ce321c... | t          | t
- INV-000001             | 4e1e537344e4faa1... | 4e1e537344e4faa1... | t          | t
- INV-000002             | 19537c1c2ff72756... | 19537c1c2ff72756... | t          | t
- INV-000003             | 8e6653100a0c4179... | 8e6653100a0c4179... | t          | t
- INV-000008             | dc3fed9a4a959517... | dc3fed9a4a959517... | t          | t
- INV-000009             | 0f643696ad687532... | 0f643696ad687532... | t          | t
- BKK-2026-10-001        | c89785134b50571e... | c89785134b50571e... | t          | t
- STORNO-BKK-2026-10-001 | a2f6215c0ceac21f... | a2f6215c0ceac21f... | t          | t
- BKK-2026-10-001R       | e92b53dfeade06f4... | e92b53dfeade06f4... | t          | t
+ JU-0001                | e97106844d1a147d... | e97106844d1a147d... | t          | t
+ INV-000001             | 03e90be808b07ca4... | 03e90be808b07ca4... | t          | t
+ INV-000002             | 1b5fe56e59a6bd89... | 1b5fe56e59a6bd89... | t          | t
+ INV-000003             | a54ca8344eeab8be... | a54ca8344eeab8be... | t          | t
+ INV-000008             | 28067050b2668895... | 28067050b2668895... | t          | t
+ INV-000009             | 87ce7131dd4ed3a5... | 87ce7131dd4ed3a5... | t          | t
+ BKK-2026-10-001        | 03b15b0b47386112... | 03b15b0b47386112... | t          | t
+ STORNO-BKK-2026-10-001 | fee725e839c52da1... | fee725e839c52da1... | t          | t
+ BKK-2026-10-001R       | 4f76818bf47d7846... | 4f76818bf47d7846... | t          | t
 (9 rows)
 
 === UJI 14: Simulasi peretas/DBA nakal mematikan trigger & mengubah nominal langsung
@@ -94,31 +94,31 @@ psql:soal3/supabase/03_uji_soal3.sql:60: ERROR:  Jurnal BKK-2026-10-001 sudah pe
 psql:soal3/supabase/03_uji_soal3.sql:94: ERROR:  audit_log bersifat append-only: UPDATE ditolak.
 psql:soal3/supabase/03_uji_soal3.sql:95: ERROR:  audit_log bersifat append-only: DELETE ditolak.
 === CUPLIKAN AUDIT LOG (10 terbaru)
- id |   table_name    | record_id | action |               actor               |             summary             
-----+-----------------+-----------+--------+-----------------------------------+---------------------------------
- 24 | journal_headers |        16 | UPDATE | zayyan.beryl@students.undip.ac.id | BKK-2026-10-001R [POSTED]
- 23 | journal_lines   |        34 | INSERT | zayyan.beryl@students.undip.ac.id | akun#1 D:0.00 K:955000.00
- 22 | journal_lines   |        33 | INSERT | zayyan.beryl@students.undip.ac.id | akun#20 D:250000.00 K:0.00
- 21 | journal_lines   |        32 | INSERT | zayyan.beryl@students.undip.ac.id | akun#17 D:705000.00 K:0.00
- 20 | journal_headers |        16 | INSERT | zayyan.beryl@students.undip.ac.id | BKK-2026-10-001R [DRAFT]
- 19 | journal_headers |        15 | UPDATE | zayyan.beryl@students.undip.ac.id | STORNO-BKK-2026-10-001 [POSTED]
- 18 | journal_lines   |        31 | INSERT | zayyan.beryl@students.undip.ac.id | akun#1 D:1000000.00 K:0.00
- 17 | journal_lines   |        30 | INSERT | zayyan.beryl@students.undip.ac.id | akun#20 D:0.00 K:250000.00
- 16 | journal_lines   |        29 | INSERT | zayyan.beryl@students.undip.ac.id | akun#17 D:0.00 K:750000.00
- 15 | journal_headers |        15 | INSERT | zayyan.beryl@students.undip.ac.id | STORNO-BKK-2026-10-001 [DRAFT]
+ id |   table_name    | record_id | action |      actor      |             summary             
+----+-----------------+-----------+--------+-----------------+---------------------------------
+ 24 | journal_headers |        16 | UPDATE | zayyan@demo.uts | BKK-2026-10-001R [POSTED]
+ 23 | journal_lines   |        34 | INSERT | zayyan@demo.uts | akun#1 D:0.00 K:955000.00
+ 22 | journal_lines   |        33 | INSERT | zayyan@demo.uts | akun#20 D:250000.00 K:0.00
+ 21 | journal_lines   |        32 | INSERT | zayyan@demo.uts | akun#17 D:705000.00 K:0.00
+ 20 | journal_headers |        16 | INSERT | zayyan@demo.uts | BKK-2026-10-001R [DRAFT]
+ 19 | journal_headers |        15 | UPDATE | zayyan@demo.uts | STORNO-BKK-2026-10-001 [POSTED]
+ 18 | journal_lines   |        31 | INSERT | zayyan@demo.uts | akun#1 D:1000000.00 K:0.00
+ 17 | journal_lines   |        30 | INSERT | zayyan@demo.uts | akun#20 D:0.00 K:250000.00
+ 16 | journal_lines   |        29 | INSERT | zayyan@demo.uts | akun#17 D:0.00 K:750000.00
+ 15 | journal_headers |        15 | INSERT | zayyan@demo.uts | STORNO-BKK-2026-10-001 [DRAFT]
 (10 rows)
 
 === DAFTAR JURNAL POSTED: created_by, created_at, hash
-      reference_no      | journal_type |            created_by             |     created_at      |   prev_hash   | hash_checksum 
-------------------------+--------------+-----------------------------------+---------------------+---------------+---------------
- JU-0001                | UMUM         | postgres                          | 2026-10-12 19:34:33 |               | bfe6c1ce61...
- INV-000001             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | bfe6c1ce61... | 4e1e537344...
- INV-000002             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | 4e1e537344... | 19537c1c2f...
- INV-000003             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | 19537c1c2f... | 8e6653100a...
- INV-000008             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | 8e6653100a... | dc3fed9a4a...
- INV-000009             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | dc3fed9a4a... | 0f643696ad...
- BKK-2026-10-001        | KAS_KELUAR   | zayyan.beryl@students.undip.ac.id | 2026-10-12 19:34:33 | 0f643696ad... | c89785134b...
- STORNO-BKK-2026-10-001 | STORNO       | zayyan.beryl@students.undip.ac.id | 2026-10-12 19:34:33 | c89785134b... | a2f6215c0c...
- BKK-2026-10-001R       | KAS_KELUAR   | zayyan.beryl@students.undip.ac.id | 2026-10-12 19:34:33 | a2f6215c0c... | e92b53dfea...
+      reference_no      | journal_type |   created_by    |     created_at      |   prev_hash   | hash_checksum 
+------------------------+--------------+-----------------+---------------------+---------------+---------------
+ JU-0001                | UMUM         | postgres        | 2026-10-12 20:12:44 |               | e97106844d...
+ INV-000001             | PERSEDIAAN   | postgres        | 2026-10-12 20:12:44 | e97106844d... | 03e90be808...
+ INV-000002             | PERSEDIAAN   | postgres        | 2026-10-12 20:12:44 | 03e90be808... | 1b5fe56e59...
+ INV-000003             | PERSEDIAAN   | postgres        | 2026-10-12 20:12:44 | 1b5fe56e59... | a54ca8344e...
+ INV-000008             | PERSEDIAAN   | postgres        | 2026-10-12 20:12:44 | a54ca8344e... | 28067050b2...
+ INV-000009             | PERSEDIAAN   | postgres        | 2026-10-12 20:12:44 | 28067050b2... | 87ce7131dd...
+ BKK-2026-10-001        | KAS_KELUAR   | zayyan@demo.uts | 2026-10-12 20:12:44 | 87ce7131dd... | 03b15b0b47...
+ STORNO-BKK-2026-10-001 | STORNO       | zayyan@demo.uts | 2026-10-12 20:12:44 | 03b15b0b47... | fee725e839...
+ BKK-2026-10-001R       | KAS_KELUAR   | zayyan@demo.uts | 2026-10-12 20:12:44 | fee725e839... | 4f76818bf4...
 (9 rows)
 
