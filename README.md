@@ -55,6 +55,19 @@ bukti/                         output uji (txt) & tangkapan layar
 run_all_tests.sh               bangun ulang DB & jalankan seluruh uji
 ```
 
+## Log prompt AI (prompt lengkap)
+
+Prompt lengkap beserta riwayat percobaan, hasil, dan evaluasinya tersimpan di folder
+`soal3/prompts/`:
+
+| Alat | Berkas | Isi |
+|---|---|---|
+| Gemini Canvas (Soal 3.1a) | [`soal3/prompts/01_gemini_canvas_prompt.md`](https://github.com/zayyanberyl-coding/uts-coding-akuntansi/blob/main/soal3/prompts/01_gemini_canvas_prompt.md) | Teknik prompt, prompt lengkap, riwayat 3 percobaan, code review hasil Gemini |
+| NotebookLM (Soal 3.1b) | [`soal3/prompts/02_notebooklm_log.md`](https://github.com/zayyanberyl-coding/uts-coding-akuntansi/blob/main/soal3/prompts/02_notebooklm_log.md) | 6 sumber, prompt verifikasi lengkap, ringkasan jawaban, tindak lanjut di kode |
+| NotebookLM: dokumen sumber | [`soal3/prompts/notebooklm_sumber_spesifikasi_kode.md`](https://github.com/zayyanberyl-coding/uts-coding-akuntansi/blob/main/soal3/prompts/notebooklm_sumber_spesifikasi_kode.md) | Spesifikasi aturan bisnis yang diuji NotebookLM |
+
+Tangkapan layar prompt & hasilnya: `bukti/screenshots/gemini_canvas_*.jpg` dan `notebooklm_*.jpg`.
+
 ## Cara menjalankan
 
 **PostgreSQL lokal**

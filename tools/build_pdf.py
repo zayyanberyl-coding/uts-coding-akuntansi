@@ -78,8 +78,7 @@ cover = f"""
     <li>Soal 1: Desain Arsitektur Data, Normalisasi &amp; Asas Berpasangan (25%)</li>
     <li>Soal 2: Otomasi Bisnis, Stored Procedure &amp; Trigger Persediaan (40%)</li>
     <li>Soal 3: Purwarupa Web Full-Stack &amp; Orkestrasi AI Tools (35%)</li>
-    <li>Lampiran: Struktur repositori &amp; cara menjalankan</li>
-    <li>Lampiran: Log Prompt AI (Gemini Canvas &amp; NotebookLM)</li>
+    <li>Lampiran: Struktur repositori, cara menjalankan &amp; lokasi log prompt AI</li>
   </ol>
   <h3>Ringkasan</h3>
   <table>
@@ -138,15 +137,6 @@ soal3 += "<h3>Uji keamanan Supabase dari browser (tanpa login)</h3>" + excerpt(
 lampiran = md_to_html((ROOT / "README.md").read_text(), ROOT)
 lampiran = re.sub(r"<h1[^>]*>.*?</h1>", "", lampiran, count=1, flags=re.S)
 
-def log_section(md_file: str, title: str) -> str:
-    h = md_to_html((ROOT / md_file).read_text(), (ROOT / md_file).parent)
-    h = re.sub(r"<h1[^>]*>.*?</h1>", "", h, count=1, flags=re.S)
-    return f"<h2>{title}</h2>" + h
-
-logprompt = (
-    "<p>Berkas asli tersimpan di folder <code>soal3/prompts/</code> pada repositori.</p>"
-    + log_section("soal3/prompts/01_gemini_canvas_prompt.md", "A. Gemini Canvas (Soal 3.1a)")
-    + log_section("soal3/prompts/02_notebooklm_log.md", "B. NotebookLM (Soal 3.1b)"))
 
 CSS = """
 @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
@@ -156,6 +146,8 @@ h1, h2, h3 { line-height: 1.25; color: #0f3d36; }
 h1 { font-size: 17pt; margin: 0 0 8pt; padding-bottom: 6pt; border-bottom: 2px solid #0f5c4d; }
 h2 { font-size: 12.5pt; margin: 16pt 0 6pt; }
 h3 { font-size: 10.5pt; margin: 12pt 0 4pt; }
+h2, h3 { break-after: avoid; page-break-after: avoid; }
+h2 + p, h3 + p { break-before: avoid; }
 p { margin: 4pt 0 6pt; }
 a { color: #0f5c4d; }
 code { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.3pt; background: #f1efe8; padding: 0 2px; border-radius: 2px; }
@@ -193,7 +185,6 @@ doc = f"""<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"/>
 <div class="part">{soal2}</div>
 <div class="part">{soal3}</div>
 <div class="part"><h1>Lampiran: Struktur Repositori &amp; Cara Menjalankan</h1>{lampiran}</div>
-<div class="part"><h1>Lampiran: Log Prompt AI</h1>{logprompt}</div>
 </body></html>"""
 
 html_path = ROOT / "tools" / "_jawaban.html"
