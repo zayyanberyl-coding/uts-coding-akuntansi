@@ -48,7 +48,7 @@ soal3/                         Purwarupa web full-stack & orkestrasi AI (35%)
     02_supabase_security.sql     RLS + REVOKE + GRANT RPC
     03_uji_soal3.sql             15 skenario uji
   web/index.html                 Formulir Voucher Kas Keluar (HTML + Tailwind + JS)
-  prompts/                       log prompt Gemini Canvas & NotebookLM
+  prompts/                       log prompt AI: 01 Gemini Canvas, 02 NotebookLM
   JAWABAN_SOAL3.md
 
 bukti/                         output uji (txt) & tangkapan layar
