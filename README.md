@@ -12,6 +12,18 @@ Repositori ini berisi seluruh artefak jawaban UTS: skema DDL, fungsi trigger SQL
 kode backend (Supabase RPC) & frontend, log prompt AI, serta bukti pengujian.
 Jawaban naratif lengkap ada di berkas PDF jawaban.
 
+## Akun demo purwarupa web
+
+Formulir: https://zayyanberyl-coding.github.io/uts-coding-akuntansi/soal3/web/
+
+| Email | Password |
+|---|---|
+| `zayyan@demo.uts` | `12345678` |
+
+Di halaman masuk tersedia tombol **"Isi akun demo"**. Akun ini khusus untuk purwarupa (project
+Supabase terpisah). Catatan: karena jurnal POSTED bersifat immutable, voucher yang dibuat penguji
+tidak dapat dihapus, hanya dapat dibalik (storno). Itulah perilaku yang memang diuji.
+
 ## Struktur
 
 ```

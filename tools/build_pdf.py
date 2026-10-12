@@ -59,6 +59,8 @@ cover = f"""
   <div class="links">
     <p><b>Repositori Git (seluruh artefak jawaban)</b><br/><a href="{REPO}">{REPO}</a></p>
     <p><b>Purwarupa web Voucher Kas Keluar (Soal 3)</b><br/><a href="{WEB}">{WEB}</a></p>
+    <p><b>Akun demo untuk mencoba web</b><br/>Email <code>zayyan@demo.uts</code> · Password <code>12345678</code>
+       (atau klik tombol "Isi akun demo" di halaman masuk)</p>
     <p><b>Basis data cloud</b><br/>Supabase (PostgreSQL) · project <code>uts-coding-akuntansi</code></p>
   </div>
   <div class="tools">
