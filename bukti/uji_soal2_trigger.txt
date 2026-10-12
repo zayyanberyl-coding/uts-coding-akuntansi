@@ -1,0 +1,50 @@
+$ psql -f soal2/02_uji_trigger.sql
+
+=== UJI 1: PURCHASE 10 unit Palet Kayu @150.000 -> stok 0 -> 10, jurnal Dr Persediaan / Cr Utang Usaha
+=== UJI 2: SALE 4 unit -> stok 10 -> 6, jurnal Dr HPP / Cr Persediaan
+=== UJI 3: ADJUSTMENT -1 (barang rusak saat stock opname) -> stok 6 -> 5
+=== UJI 4: SALE 6 unit padahal stok 5 -> HARUS DITOLAK (RAISE EXCEPTION), stok tetap 5
+psql:soal2/02_uji_trigger.sql:17: ERROR:  Transaksi SALE ditolak: stok BRG-001 (Palet Kayu Standar) hanya 5 unit, diminta 6 unit. Stok tidak boleh negatif.
+HINT:  Periksa stok fisik atau catat PURCHASE/ADJUSTMENT terlebih dahulu.
+CONTEXT:  PL/pgSQL function trg_update_stock_and_journal() line 39 at RAISE
+=== UJI 5: SALE qty negatif (trik mengakali stok) -> HARUS DITOLAK
+psql:soal2/02_uji_trigger.sql:20: ERROR:  Qty -3 untuk transaksi SALE harus lebih dari 0
+CONTEXT:  PL/pgSQL function trg_update_stock_and_journal() line 13 at RAISE
+=== UJI 6: Rollback menyeluruh - 2 penjualan dalam 1 transaksi, yang kedua gagal
+psql:soal2/02_uji_trigger.sql:25: ERROR:  Transaksi SALE ditolak: stok BRG-001 (Palet Kayu Standar) hanya 2 unit, diminta 3 unit. Stok tidak boleh negatif.
+HINT:  Periksa stok fisik atau catat PURCHASE/ADJUSTMENT terlebih dahulu.
+CONTEXT:  PL/pgSQL function trg_update_stock_and_journal() line 39 at RAISE
+    -> stok harus tetap 5 (penjualan pertama ikut dibatalkan)
+=== POSISI STOK
+ item_id |      item_name      | stock_qty | unit_cost | nilai_persediaan 
+---------+---------------------+-----------+-----------+------------------
+ BRG-001 | Palet Kayu Standar  |         5 | 150000.00 |        750000.00
+ BRG-002 | Stretch Film 50cm   |         0 |  85000.00 |             0.00
+ BRG-003 | Kardus Ekspor Besar |         0 |  12500.00 |             0.00
+(3 rows)
+
+=== LOG MUTASI & TAUTAN JURNAL
+ trx_id | item_id |  trx_type  | qty | reference_no | posting_status 
+--------+---------+------------+-----+--------------+----------------
+      1 | BRG-001 | PURCHASE   |  10 | INV-000001   | POSTED
+      2 | BRG-001 | SALE       |   4 | INV-000002   | POSTED
+      3 | BRG-001 | ADJUSTMENT |  -1 | INV-000003   | POSTED
+(3 rows)
+
+=== JURNAL OTOMATIS DI BUKU BESAR
+ reference_no | account_code |           account_name            |   debit    |   credit   
+--------------+--------------+-----------------------------------+------------+------------
+ INV-000001   | 1301         | Persediaan Barang Dagang          | 1500000.00 |       0.00
+ INV-000001   | 2101         | Utang Usaha                       |       0.00 | 1500000.00
+ INV-000002   | 5101         | Beban Pokok Pendapatan (HPP)      |  600000.00 |       0.00
+ INV-000002   | 1301         | Persediaan Barang Dagang          |       0.00 |  600000.00
+ INV-000003   | 5901         | Beban Selisih/Kerugian Persediaan |  150000.00 |       0.00
+ INV-000003   | 1301         | Persediaan Barang Dagang          |       0.00 |  150000.00
+(6 rows)
+
+=== REKONSILIASI: saldo akun Persediaan (GL) = nilai stok fisik?
+ saldo_gl_persediaan | nilai_stok_fisik 
+---------------------+------------------
+           750000.00 |        750000.00
+(1 row)
+

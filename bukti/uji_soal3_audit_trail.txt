@@ -1,0 +1,124 @@
+$ psql -f soal3/supabase/03_uji_soal3.sql
+
+=== UJI 1: Voucher kas keluar seimbang via RPC -> BERHASIL, created_by & hash terisi otomatis
+                                      jsonb_pretty                                       
+-----------------------------------------------------------------------------------------
+ {                                                                                      +
+     "id": 10,                                                                          +
+     "total": 1000000.00,                                                               +
+     "created_at": "2026-10-12T19:34:33.947351+07:00",                                  +
+     "created_by": "zayyan.beryl@students.undip.ac.id",                                 +
+     "reference_no": "BKK-2026-10-001",                                                 +
+     "hash_checksum": "c89785134b50571e632eddc8c86188bbdb6d1816b15138bca10c4e541071fdc2"+
+ }
+(1 row)
+
+=== UJI 2: Voucher tidak seimbang dikirim langsung ke API -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:20: ERROR:  Zero-discrepancy dilanggar: Total Debit 750000.00 <> Total Kredit 700000.00
+=== UJI 3: "Kas keluar" yang justru mendebit Kas -> DITOLAK (aturan bisnis)
+psql:soal3/supabase/03_uji_soal3.sql:24: ERROR:  Voucher kas KELUAR tidak boleh mendebit akun kas/bank (Kas).
+=== UJI 4: Voucher tanpa akun kas/bank di sisi kredit -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:28: ERROR:  Voucher kas keluar wajib mengkredit akun Kas/Bank/Kas Kecil.
+=== UJI 5: UPDATE nominal / deskripsi jurnal POSTED -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:31: ERROR:  Jurnal 10 (BKK-2026-10-001) sudah POSTED dan bersifat final: UPDATE ditolak. Gunakan jurnal pembalik: SELECT rpc_reverse_journal(10, 'alasan');
+psql:soal3/supabase/03_uji_soal3.sql:33: ERROR:  Baris jurnal milik jurnal POSTED tidak dapat di-UPDATE . Gunakan jurnal pembalik (storno).
+=== UJI 6: DELETE jurnal POSTED / barisnya -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:36: ERROR:  Baris jurnal milik jurnal POSTED tidak dapat di-DELETE . Gunakan jurnal pembalik (storno).
+psql:soal3/supabase/03_uji_soal3.sql:37: ERROR:  Jurnal 10 (BKK-2026-10-001) sudah POSTED dan bersifat final: DELETE ditolak. Gunakan jurnal pembalik: SELECT rpc_reverse_journal(10, 'alasan');
+=== UJI 7: Menyisipkan baris baru ke jurnal POSTED -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:41: ERROR:  Baris jurnal milik jurnal POSTED tidak dapat di-INSERT . Gunakan jurnal pembalik (storno).
+=== UJI 8: TRUNCATE tabel jurnal -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:44: ERROR:  TRUNCATE pada tabel journal_lines dilarang (jejak audit).
+=== UJI 9: Klien mencoba memalsukan created_by -> diabaikan, diisi server
+ reference_no |            created_by             | created_at_hari_ini 
+--------------+-----------------------------------+---------------------
+ DRAFT-TES    | zayyan.beryl@students.undip.ac.id | t
+(1 row)
+
+=== UJI 10: Koreksi lewat jurnal pembalik (storno) -> BERHASIL
+                                      jsonb_pretty                                       
+-----------------------------------------------------------------------------------------
+ {                                                                                      +
+     "id": 15,                                                                          +
+     "reversal_of": "BKK-2026-10-001",                                                  +
+     "reference_no": "STORNO-BKK-2026-10-001",                                          +
+     "hash_checksum": "a2f6215c0ceac21fb66beff1c6f5a6dc00a0657df4e18f4f533e5dc8b50868d1"+
+ }
+(1 row)
+
+=== UJI 11: Storno kedua kali atas jurnal yang sama -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:60: ERROR:  Jurnal BKK-2026-10-001 sudah pernah dibalik.
+=== UJI 12: Input ulang voucher yang benar
+   voucher_baru   
+------------------
+ BKK-2026-10-001R
+(1 row)
+
+=== JEJAK: original, storno, dan koreksi (net efek = voucher koreksi saja)
+      reference_no      | journal_type | account_code |         account_name         |   debit    |   credit   
+------------------------+--------------+--------------+------------------------------+------------+------------
+ BKK-2026-10-001        | KAS_KELUAR   | 6102         | Beban Listrik, Air & Telepon |  750000.00 |       0.00
+ BKK-2026-10-001        | KAS_KELUAR   | 6105         | Beban Transportasi           |  250000.00 |       0.00
+ BKK-2026-10-001        | KAS_KELUAR   | 1101         | Kas                          |       0.00 | 1000000.00
+ STORNO-BKK-2026-10-001 | STORNO       | 6102         | Beban Listrik, Air & Telepon |       0.00 |  750000.00
+ STORNO-BKK-2026-10-001 | STORNO       | 6105         | Beban Transportasi           |       0.00 |  250000.00
+ STORNO-BKK-2026-10-001 | STORNO       | 1101         | Kas                          | 1000000.00 |       0.00
+ BKK-2026-10-001R       | KAS_KELUAR   | 6102         | Beban Listrik, Air & Telepon |  705000.00 |       0.00
+ BKK-2026-10-001R       | KAS_KELUAR   | 6105         | Beban Transportasi           |  250000.00 |       0.00
+ BKK-2026-10-001R       | KAS_KELUAR   | 1101         | Kas                          |       0.00 |  955000.00
+(9 rows)
+
+=== UJI 13: Verifikasi integritas seluruh jurnal POSTED (hash & rantai)
+      reference_no      |   hash_tersimpan    | hash_dihitung_ulang | hash_valid | chain_valid 
+------------------------+---------------------+---------------------+------------+-------------
+ JU-0001                | bfe6c1ce61ce321c... | bfe6c1ce61ce321c... | t          | t
+ INV-000001             | 4e1e537344e4faa1... | 4e1e537344e4faa1... | t          | t
+ INV-000002             | 19537c1c2ff72756... | 19537c1c2ff72756... | t          | t
+ INV-000003             | 8e6653100a0c4179... | 8e6653100a0c4179... | t          | t
+ INV-000008             | dc3fed9a4a959517... | dc3fed9a4a959517... | t          | t
+ INV-000009             | 0f643696ad687532... | 0f643696ad687532... | t          | t
+ BKK-2026-10-001        | c89785134b50571e... | c89785134b50571e... | t          | t
+ STORNO-BKK-2026-10-001 | a2f6215c0ceac21f... | a2f6215c0ceac21f... | t          | t
+ BKK-2026-10-001R       | e92b53dfeade06f4... | e92b53dfeade06f4... | t          | t
+(9 rows)
+
+=== UJI 14: Simulasi peretas/DBA nakal mematikan trigger & mengubah nominal langsung
+    -> hasil verifikasi setelah manipulasi:
+ reference_no | hash_valid | chain_valid 
+--------------+------------+-------------
+ JU-0001      | f          | t
+(1 row)
+
+    -> (ROLLBACK: data dikembalikan seperti semula)
+=== UJI 15: Mengubah / menghapus audit_log -> DITOLAK
+psql:soal3/supabase/03_uji_soal3.sql:94: ERROR:  audit_log bersifat append-only: UPDATE ditolak.
+psql:soal3/supabase/03_uji_soal3.sql:95: ERROR:  audit_log bersifat append-only: DELETE ditolak.
+=== CUPLIKAN AUDIT LOG (10 terbaru)
+ id |   table_name    | record_id | action |               actor               |             summary             
+----+-----------------+-----------+--------+-----------------------------------+---------------------------------
+ 24 | journal_headers |        16 | UPDATE | zayyan.beryl@students.undip.ac.id | BKK-2026-10-001R [POSTED]
+ 23 | journal_lines   |        34 | INSERT | zayyan.beryl@students.undip.ac.id | akun#1 D:0.00 K:955000.00
+ 22 | journal_lines   |        33 | INSERT | zayyan.beryl@students.undip.ac.id | akun#20 D:250000.00 K:0.00
+ 21 | journal_lines   |        32 | INSERT | zayyan.beryl@students.undip.ac.id | akun#17 D:705000.00 K:0.00
+ 20 | journal_headers |        16 | INSERT | zayyan.beryl@students.undip.ac.id | BKK-2026-10-001R [DRAFT]
+ 19 | journal_headers |        15 | UPDATE | zayyan.beryl@students.undip.ac.id | STORNO-BKK-2026-10-001 [POSTED]
+ 18 | journal_lines   |        31 | INSERT | zayyan.beryl@students.undip.ac.id | akun#1 D:1000000.00 K:0.00
+ 17 | journal_lines   |        30 | INSERT | zayyan.beryl@students.undip.ac.id | akun#20 D:0.00 K:250000.00
+ 16 | journal_lines   |        29 | INSERT | zayyan.beryl@students.undip.ac.id | akun#17 D:0.00 K:750000.00
+ 15 | journal_headers |        15 | INSERT | zayyan.beryl@students.undip.ac.id | STORNO-BKK-2026-10-001 [DRAFT]
+(10 rows)
+
+=== DAFTAR JURNAL POSTED: created_by, created_at, hash
+      reference_no      | journal_type |            created_by             |     created_at      |   prev_hash   | hash_checksum 
+------------------------+--------------+-----------------------------------+---------------------+---------------+---------------
+ JU-0001                | UMUM         | postgres                          | 2026-10-12 19:34:33 |               | bfe6c1ce61...
+ INV-000001             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | bfe6c1ce61... | 4e1e537344...
+ INV-000002             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | 4e1e537344... | 19537c1c2f...
+ INV-000003             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | 19537c1c2f... | 8e6653100a...
+ INV-000008             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | 8e6653100a... | dc3fed9a4a...
+ INV-000009             | PERSEDIAAN   | postgres                          | 2026-10-12 19:34:33 | dc3fed9a4a... | 0f643696ad...
+ BKK-2026-10-001        | KAS_KELUAR   | zayyan.beryl@students.undip.ac.id | 2026-10-12 19:34:33 | 0f643696ad... | c89785134b...
+ STORNO-BKK-2026-10-001 | STORNO       | zayyan.beryl@students.undip.ac.id | 2026-10-12 19:34:33 | c89785134b... | a2f6215c0c...
+ BKK-2026-10-001R       | KAS_KELUAR   | zayyan.beryl@students.undip.ac.id | 2026-10-12 19:34:33 | a2f6215c0c... | e92b53dfea...
+(9 rows)
+

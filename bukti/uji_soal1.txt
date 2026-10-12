@@ -1,0 +1,29 @@
+$ psql -f soal1/02_uji_soal1.sql
+
+=== UJI 1: Jurnal seimbang (Debit 500.000 = Kredit 500.000) -> HARUS BERHASIL
+=== UJI 2: Jurnal TIDAK seimbang dikirim langsung (simulasi API) -> HARUS DITOLAK saat COMMIT
+psql:soal1/02_uji_soal1.sql:29: ERROR:  Jurnal 2 tidak seimbang: 2 baris, Total Debit = 750000.00, Total Kredit = 700000.00
+=== UJI 3: Nominal debit negatif -> HARUS DITOLAK (ck_lines_debit_nonneg)
+psql:soal1/02_uji_soal1.sql:33: ERROR:  new row for relation "journal_lines" violates check constraint "ck_lines_debit_nonneg"
+=== UJI 4: Debit dan kredit sama-sama nol -> HARUS DITOLAK (ck_lines_not_both_zero)
+psql:soal1/02_uji_soal1.sql:37: ERROR:  new row for relation "journal_lines" violates check constraint "ck_lines_not_both_zero"
+=== UJI 5: Hapus akun Kas yang sudah dipakai jurnal -> HARUS DITOLAK (ON DELETE RESTRICT)
+psql:soal1/02_uji_soal1.sql:40: ERROR:  update or delete on table "chart_of_accounts" violates foreign key constraint "fk_lines_account" on table "journal_lines"
+=== UJI 6: Hapus header jurnal yang punya baris -> HARUS DITOLAK (ON DELETE RESTRICT)
+psql:soal1/02_uji_soal1.sql:43: ERROR:  update or delete on table "journal_headers" violates foreign key constraint "fk_lines_header" on table "journal_lines"
+=== UJI 7: Posting jurnal yang baru punya 0 baris -> HARUS DITOLAK
+psql:soal1/02_uji_soal1.sql:49: ERROR:  Jurnal 3 tidak dapat di-POSTED: minimal 2 baris (debit & kredit).
+=== UJI 8: Akun tidak terdaftar di bagan akun -> HARUS DITOLAK (FOREIGN KEY)
+psql:soal1/02_uji_soal1.sql:54: ERROR:  insert or update on table "journal_lines" violates foreign key constraint "fk_lines_account"
+=== HASIL AKHIR: hanya jurnal JU-0001 yang tersimpan, dan seimbang
+ reference_no | posting_status | account_code | account_name |   debit   |  credit   
+--------------+----------------+--------------+--------------+-----------+-----------
+ JU-0001      | POSTED         | 6103         | Beban Sewa   | 500000.00 |      0.00
+ JU-0001      | POSTED         | 1101         | Kas          |      0.00 | 500000.00
+(2 rows)
+
+ reference_no | total_debit | total_kredit 
+--------------+-------------+--------------
+ JU-0001      |   500000.00 |    500000.00
+(1 row)
+

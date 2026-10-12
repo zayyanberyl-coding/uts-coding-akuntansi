@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voucher Kas Keluar</title>
+  <!--
+    Purwarupa Modul Voucher Entri Transaksi Kas Keluar
+    UTS Pemrograman/Coding - Zayyan Beryl (12030124140283) - Kelas E
+    Stack: HTML + Tailwind CSS (CDN) + JavaScript biasa + Supabase (PostgreSQL)
+  -->
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.100.1/dist/umd/supabase.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'], mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'] },
+          colors: { ink: '#1c2430', paper: '#f6f4ef', line: '#d9d4c7', ledger: '#0f5c4d', alarm: '#b3261e' }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { background: #f6f4ef; color: #1c2430; }
+    .num { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; text-align: right; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #0f5c4d; outline-offset: 0; }
+    .rule-ok::before { content: '✓'; color: #0f5c4d; font-weight: 700; margin-right: .5rem; }
+    .rule-bad::before { content: '✗'; color: #b3261e; font-weight: 700; margin-right: .5rem; }
+  </style>
+</head>
+<body class="font-sans min-h-screen">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="border-b border-line bg-white">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-ledger font-semibold">PT Diponegoro Logistik Utama · General Ledger</p>
+        <h1 class="text-xl font-bold">Voucher Kas Keluar <span class="font-normal text-gray-500">(Bukti Kas Keluar)</span></h1>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span id="modeBadge" class="px-2 py-1 rounded border text-xs font-semibold"></span>
+        <span id="userInfo" class="text-gray-600"></span>
+        <button id="btnLogout" class="hidden underline text-gray-600 hover:text-ink">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- ===================== LOGIN ===================== -->
+    <section id="loginSection" class="hidden max-w-md mx-auto bg-white border border-line rounded-lg p-6">
+      <h2 class="font-semibold text-lg mb-1">Masuk</h2>
+      <p class="text-sm text-gray-600 mb-4">Login diperlukan agar setiap voucher tercatat <b>created_by</b>-nya (jejak audit).</p>
+      <form id="loginForm" class="space-y-3">
+        <label class="block text-sm">Email
+          <input id="loginEmail" type="email" required class="mt-1 w-full border border-line rounded px-3 py-2" />
+        </label>
+        <label class="block text-sm">Password
+          <input id="loginPassword" type="password" required class="mt-1 w-full border border-line rounded px-3 py-2" />
+        </label>
+        <button class="w-full bg-ledger text-white rounded py-2 font-semibold">Masuk</button>
+        <p id="loginError" class="text-sm text-alarm"></p>
+      </form>
+    </section>
+
+    <!-- ===================== APLIKASI ===================== -->
+    <div id="appSection" class="hidden space-y-6">
+
+      <!-- FORM VOUCHER -->
+      <section class="bg-white border border-line rounded-lg">
+        <div class="p-5 border-b border-line grid gap-4 md:grid-cols-4">
+          <label class="text-sm">Tanggal Transaksi
+            <input id="trxDate" type="date" class="mt-1 w-full border border-line rounded px-3 py-2" />
+          </label>
+          <label class="text-sm">No. Bukti (BKK)
+            <input id="refNo" type="text" class="mt-1 w-full border border-line rounded px-3 py-2 font-mono" />
+          </label>
+          <label class="text-sm md:col-span-2">Deskripsi / Dibayarkan kepada
+            <input id="description" type="text" placeholder="mis. Pembayaran listrik kantor Oktober kepada PLN" class="mt-1 w-full border border-line rounded px-3 py-2" />
+          </label>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-paper text-left text-xs uppercase tracking-wide text-gray-600">
+              <tr>
+                <th class="px-4 py-2 w-10">#</th>
+                <th class="px-4 py-2">Akun</th>
+                <th class="px-4 py-2 w-44 text-right">Debit (Rp)</th>
+                <th class="px-4 py-2 w-44 text-right">Kredit (Rp)</th>
+                <th class="px-2 py-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody id="linesBody"></tbody>
+            <tfoot class="border-t-2 border-ink font-semibold">
+              <tr>
+                <td></td>
+                <td class="px-4 py-3">
+                  <button id="btnAddLine" type="button" class="text-ledger hover:underline font-semibold">+ Tambah baris</button>
+                </td>
+                <td class="px-4 py-3 num" id="totalDebit">0</td>
+                <td class="px-4 py-3 num" id="totalCredit">0</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- LIVE BALANCED INDICATOR -->
+        <div class="p-5 border-t border-line grid gap-5 md:grid-cols-[1fr_auto] items-start">
+          <div>
+            <div id="balanceBox" class="rounded-lg border-2 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+              <span id="balanceLabel" class="font-bold tracking-wide"></span>
+              <span class="text-sm">Selisih: <span id="balanceDiff" class="num font-semibold"></span></span>
+            </div>
+            <ul id="rulesList" class="mt-3 text-sm space-y-1"></ul>
+          </div>
+          <div class="flex flex-col items-stretch gap-2 md:w-56">
+            <button id="btnSubmit" type="button" disabled
+              class="bg-ledger text-white rounded px-5 py-3 font-semibold disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
+              Submit &amp; Posting
+            </button>
+            <button id="btnReset" type="button" class="border border-line rounded px-5 py-2 text-sm">Kosongkan form</button>
+          </div>
+        </div>
+        <div id="submitResult" class="hidden mx-5 mb-5 rounded border px-4 py-3 text-sm"></div>
+      </section>
+
+      <!-- DAFTAR JURNAL & AUDIT -->
+      <section class="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <div class="bg-white border border-line rounded-lg">
+          <div class="px-5 py-3 border-b border-line flex items-center justify-between">
+            <h2 class="font-semibold">Jurnal Terposting <span class="text-xs font-normal text-gray-500">(tidak dapat diubah/dihapus)</span></h2>
+            <button id="btnVerify" class="text-sm border border-ledger text-ledger rounded px-3 py-1 hover:bg-ledger hover:text-white">Verifikasi hash</button>
+          </div>
+          <div id="verifyResult" class="hidden px-5 py-2 text-sm border-b border-line"></div>
+          <div id="journalList" class="divide-y divide-line max-h-[520px] overflow-y-auto"></div>
+        </div>
+
+        <div class="bg-white border border-line rounded-lg">
+          <div class="px-5 py-3 border-b border-line">
+            <h2 class="font-semibold">Audit Log <span class="text-xs font-normal text-gray-500">(append-only)</span></h2>
+          </div>
+          <ul id="auditList" class="text-xs font-mono divide-y divide-line max-h-[560px] overflow-y-auto"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-4 pb-8 text-xs text-gray-500">
+    UTS Pemrograman/Coding · Zayyan Beryl · 12030124140283 · Kelas E · Validasi di browser hanya untuk kenyamanan; aturan yang sama ditegakkan ulang oleh database (RPC + trigger).
+  </footer>
+
+<script>
+// =====================================================================
+// 1. KONFIGURASI SUPABASE
+//    Project URL & publishable key dari Supabase (Settings -> API Keys).
+//    Publishable key memang boleh publik; keamanan dijaga oleh RLS,
+//    REVOKE hak tulis langsung, dan fungsi RPC di database.
+//    Jika dikosongkan, aplikasi berjalan dalam MODE DEMO (data di memori).
+// =====================================================================
+const SUPABASE_URL = 'https://wvwjptppqxdlbqqtuaey.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Zh6fqHBgxbSNLaCRYJxcWA_uFKg5Grc';
+
+const KAS_CODES = ['1101', '1102', '1103'];       // Kas, Bank, Kas Kecil
+const rupiah = n => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0);
+const $ = id => document.getElementById(id);
+
+// =====================================================================
+// 2. LAPISAN DATA (backend)
+//    - SupabaseBackend : memanggil fungsi RPC di PostgreSQL
+//    - DemoBackend     : tiruan sederhana di memori untuk mencoba UI
+// =====================================================================
+function makeSupabaseBackend() {
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const call = async (fn, args) => {
+    const { data, error } = await client.rpc(fn, args || {});
+    if (error) throw new Error(error.message);
+    return data;
+  };
+  return {
+    mode: 'SUPABASE',
+    async getUser() { const { data } = await client.auth.getUser(); return data.user; },
+    async login(email, password) {
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+    },
+    async logout() { await client.auth.signOut(); },
+    listAccounts: () => call('rpc_list_accounts'),
+    listJournals: () => call('rpc_list_journals', { p_limit: 50 }),
+    listAudit: () => call('rpc_list_audit_log', { p_limit: 40 }),
+    verify: () => call('rpc_verify_journal_integrity'),
+    createVoucher: v => call('rpc_create_cash_voucher', {
+      p_transaction_date: v.date, p_reference_no: v.ref, p_description: v.description, p_lines: v.lines }),
+    reverse: (id, reason) => call('rpc_reverse_journal', { p_header_id: id, p_reason: reason })
+  };
+}
+
+function makeDemoBackend() {
+  const accounts = [
+    ['1101','Kas','DEBIT','ASET'], ['1102','Bank','DEBIT','ASET'], ['1103','Kas Kecil','DEBIT','ASET'],
+    ['1401','Sewa Dibayar di Muka','DEBIT','ASET'], ['2101','Utang Usaha','CREDIT','LIABILITAS'],
+    ['2102','Utang Gaji','CREDIT','LIABILITAS'], ['6101','Beban Gaji','DEBIT','BEBAN'],
+    ['6102','Beban Listrik, Air & Telepon','DEBIT','BEBAN'], ['6103','Beban Sewa','DEBIT','BEBAN'],
+    ['6104','Beban Perlengkapan Kantor','DEBIT','BEBAN'], ['6105','Beban Transportasi','DEBIT','BEBAN']
+  ].map(([account_code, account_name, normal_balance, report_classification]) =>
+        ({ account_code, account_name, normal_balance, report_classification }));
+  const journals = [], audit = [];
+  let lastHash = null;
+  const user = 'demo@voucher.local';
+  const sha256 = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))]
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const log = (action, j) => audit.push({ id: audit.length + 1, table_name: 'journal_headers', record_id: j.id,
+    action, actor: user, logged_at: new Date().toISOString(), summary: `${j.reference_no} [${j.posting_status}]` });
+  async function post(h, lines) {
+    if (journals.some(j => j.reference_no === h.reference_no)) throw new Error('Nomor bukti sudah dipakai (UNIQUE).');
+    const j = { ...h, id: journals.length + 1, posting_status: 'POSTED', created_by: user,
+      created_at: new Date().toISOString(), prev_hash: lastHash,
+      lines: lines.map(l => ({ ...l, account_name: accounts.find(a => a.account_code === l.account_code).account_name })) };
+    j.total = lines.reduce((s, l) => s + Number(l.debit), 0);
+    j.hash_checksum = await sha256(JSON.stringify([j.id, j.transaction_date, j.reference_no, j.description, j.lines, lastHash]));
+    lastHash = j.hash_checksum;
+    journals.push(j); log('INSERT', j); return j;
+  }
+  return {
+    mode: 'DEMO',
+    async getUser() { return { email: user }; },
+    async login() {}, async logout() {},
+    async listAccounts() { return accounts; },
+    async listJournals() {
+      return journals.slice().reverse().map(j => ({ ...j,
+        reversed_by_ref: journals.find(x => x.reversal_of === j.id)?.reference_no || null,
+        reversal_of_ref: journals.find(x => x.id === j.reversal_of)?.reference_no || null }));
+    },
+    async listAudit() { return audit.slice().reverse(); },
+    async verify() { return journals.map(j => ({ reference_no: j.reference_no, hash_valid: true, chain_valid: true })); },
+    async createVoucher(v) {
+      // aturan yang sama dengan RPC di database
+      const d = v.lines.reduce((s, l) => s + Number(l.debit), 0), c = v.lines.reduce((s, l) => s + Number(l.credit), 0);
+      if (d !== c) throw new Error(`Zero-discrepancy dilanggar: Total Debit ${d} <> Total Kredit ${c}`);
+      return post({ transaction_date: v.date, reference_no: v.ref, description: v.description, journal_type: 'KAS_KELUAR' }, v.lines);
+    },
+    async reverse(id, reason) {
+      const o = journals.find(j => j.id === id);
+      if (journals.some(j => j.reversal_of === id)) throw new Error(`Jurnal ${o.reference_no} sudah pernah dibalik.`);
+      return post({ transaction_date: new Date().toISOString().slice(0, 10), reference_no: 'STORNO-' + o.reference_no,
+        description: `Pembalik atas ${o.reference_no}: ${reason}`, journal_type: 'STORNO', reversal_of: id },
+        o.lines.map(l => ({ account_code: l.account_code, debit: l.credit, credit: l.debit })));
+    }
+  };
+}
+
+// ?demo pada URL memaksa mode demo (untuk mencoba UI tanpa login)
+const FORCE_DEMO = new URLSearchParams(location.search).has('demo');
+const api = (SUPABASE_URL && SUPABASE_ANON_KEY && !FORCE_DEMO) ? makeSupabaseBackend() : makeDemoBackend();
+
+// =====================================================================
+// 3. STATE FORM
+// =====================================================================
+let accounts = [];
+let lines = [];                           // [{account_code, debit, credit}]
+
+function emptyLine() { return { account_code: '', debit: '', credit: '' }; }
+
+function defaultRef() {
+  const d = new Date();
+  const ymd = d.toISOString().slice(0, 10).replace(/-/g, '');
+  return `BKK-${ymd}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`;
+}
+
+function resetForm() {
+  $('trxDate').value = new Date().toLocaleDateString('sv-SE');      // format YYYY-MM-DD
+  $('trxDate').max = $('trxDate').value;
+  $('refNo').value = defaultRef();
+  $('description').value = '';
+  lines = [emptyLine(), { account_code: '1101', debit: '', credit: '' }];
+  renderLines();
+}
+
+// =====================================================================
+// 4. RENDER BARIS JURNAL
+// =====================================================================
+function accountOptions(selected) {
+  const groups = {};
+  accounts.forEach(a => (groups[a.report_classification] ||= []).push(a));
+  return '<option value="">— pilih akun —</option>' + Object.entries(groups).map(([g, list]) =>
+    `<optgroup label="${g}">` + list.map(a =>
+      `<option value="${a.account_code}" ${a.account_code === selected ? 'selected' : ''}>${a.account_code} · ${a.account_name}</option>`
+    ).join('') + '</optgroup>').join('');
+}
+
+function renderLines() {
+  $('linesBody').innerHTML = lines.map((l, i) => `
+    <tr class="border-t border-line">
+      <td class="px-4 py-2 text-gray-500">${i + 1}</td>
+      <td class="px-4 py-2">
+        <select data-i="${i}" data-f="account_code" class="w-full border border-line rounded px-2 py-2 bg-white">${accountOptions(l.account_code)}</select>
+      </td>
+      <td class="px-4 py-2"><input data-i="${i}" data-f="debit" type="number" min="0" step="0.01" inputmode="decimal" value="${l.debit}" class="w-full border border-line rounded px-2 py-2 num" placeholder="0" /></td>
+      <td class="px-4 py-2"><input data-i="${i}" data-f="credit" type="number" min="0" step="0.01" inputmode="decimal" value="${l.credit}" class="w-full border border-line rounded px-2 py-2 num" placeholder="0" /></td>
+      <td class="px-2 py-2 text-center">
+        <button data-del="${i}" title="Hapus baris" class="text-gray-400 hover:text-alarm text-lg leading-none ${lines.length <= 2 ? 'invisible' : ''}">×</button>
+      </td>
+    </tr>`).join('');
+  updateTotals();
+}
+
+// Event delegation: satu listener untuk seluruh tabel
+$('linesBody').addEventListener('input', e => {
+  const i = e.target.dataset.i, f = e.target.dataset.f;
+  if (i === undefined) return;
+  lines[i][f] = e.target.value;
+  // satu baris hanya boleh satu sisi: isi debit -> kosongkan kredit, dan sebaliknya
+  if (f === 'debit' && Number(e.target.value) > 0) { lines[i].credit = ''; e.target.closest('tr').querySelector('[data-f=credit]').value = ''; }
+  if (f === 'credit' && Number(e.target.value) > 0) { lines[i].debit = ''; e.target.closest('tr').querySelector('[data-f=debit]').value = ''; }
+  updateTotals();
+});
+$('linesBody').addEventListener('change', e => { if (e.target.dataset.f === 'account_code') { lines[e.target.dataset.i].account_code = e.target.value; updateTotals(); } });
+$('linesBody').addEventListener('click', e => {
+  if (e.target.dataset.del !== undefined) { lines.splice(Number(e.target.dataset.del), 1); renderLines(); }
+});
+$('btnAddLine').addEventListener('click', () => { lines.push(emptyLine()); renderLines(); });
+['trxDate', 'refNo', 'description'].forEach(id => $(id).addEventListener('input', updateTotals));
+
+// =====================================================================
+// 5. LIVE BALANCED INDICATOR + VALIDASI ATURAN BISNIS
+//    Tombol Submit hanya aktif bila SEMUA aturan terpenuhi.
+// =====================================================================
+function cents(v) { return Math.round((Number(v) || 0) * 100); }   // hindari galat pecahan desimal
+
+function validate() {
+  const filled = lines.filter(l => l.account_code || cents(l.debit) || cents(l.credit));
+  const totalD = filled.reduce((s, l) => s + cents(l.debit), 0);
+  const totalC = filled.reduce((s, l) => s + cents(l.credit), 0);
+  const cashLines = filled.filter(l => KAS_CODES.includes(l.account_code));
+  const rules = [
+    ['Tanggal, No. Bukti & Deskripsi terisi', $('trxDate').value && $('refNo').value.trim() && $('description').value.trim()],
+    ['Tanggal tidak di masa depan', $('trxDate').value && $('trxDate').value <= new Date().toLocaleDateString('sv-SE')],
+    ['Minimal 2 baris jurnal', filled.length >= 2],
+    ['Setiap baris punya akun & nominal > 0 (tidak negatif)', filled.length > 0 && filled.every(l =>
+        l.account_code && (cents(l.debit) > 0) !== (cents(l.credit) > 0) && cents(l.debit) >= 0 && cents(l.credit) >= 0)],
+    ['Akun Kas/Bank berada di sisi KREDIT (kas keluar)', cashLines.length > 0 && cashLines.every(l => cents(l.debit) === 0 && cents(l.credit) > 0)],
+    ['Total Debit = Total Kredit (zero-discrepancy)', totalD > 0 && totalD === totalC]
+  ];
+  return { totalD, totalC, rules, ok: rules.every(r => r[1]), payload: filled.map(l => ({
+    account_code: l.account_code, debit: cents(l.debit) / 100, credit: cents(l.credit) / 100 })) };
+}
+
+function updateTotals() {
+  const v = validate();
+  $('totalDebit').textContent = rupiah(v.totalD / 100);
+  $('totalCredit').textContent = rupiah(v.totalC / 100);
+  const diff = (v.totalD - v.totalC) / 100;
+  $('balanceDiff').textContent = rupiah(Math.abs(diff)) + (diff > 0 ? ' (debit lebih)' : diff < 0 ? ' (kredit lebih)' : '');
+  const balanced = v.totalD > 0 && v.totalD === v.totalC;
+  $('balanceBox').className = 'rounded-lg border-2 px-4 py-3 flex flex-wrap items-center justify-between gap-2 ' +
+    (balanced ? 'border-ledger bg-emerald-50 text-ledger' : 'border-alarm bg-red-50 text-alarm');
+  $('balanceLabel').textContent = balanced ? '● SEIMBANG — Debit = Kredit' : '● TIDAK SEIMBANG';
+  $('rulesList').innerHTML = v.rules.map(([t, ok]) => `<li class="${ok ? 'rule-ok text-gray-700' : 'rule-bad text-gray-500'}">${t}</li>`).join('');
+  $('btnSubmit').disabled = !v.ok;
+}
+
+// =====================================================================
+// 6. SUBMIT -> RPC rpc_create_cash_voucher (database memvalidasi ulang)
+// =====================================================================
+function showResult(ok, html) {
+  const box = $('submitResult');
+  box.className = 'mx-5 mb-5 rounded border px-4 py-3 text-sm ' + (ok ? 'border-ledger bg-emerald-50' : 'border-alarm bg-red-50 text-alarm');
+  box.innerHTML = html;
+}
+
+$('btnSubmit').addEventListener('click', async () => {
+  const v = validate();
+  if (!v.ok) return;
+  $('btnSubmit').disabled = true;
+  $('btnSubmit').textContent = 'Menyimpan…';
+  try {
+    const r = await api.createVoucher({ date: $('trxDate').value, ref: $('refNo').value.trim(),
+      description: $('description').value.trim(), lines: v.payload });
+    showResult(true, `<b>Voucher ${r.reference_no} berhasil di-POSTED</b> oleh ${r.created_by}.<br>
+      <span class="font-mono text-xs break-all">hash_checksum: ${r.hash_checksum}</span>`);
+    resetForm();
+    await refreshLists();
+  } catch (err) {
+    showResult(false, '<b>Ditolak server:</b> ' + err.message);
+  } finally {
+    $('btnSubmit').textContent = 'Submit & Posting';
+    updateTotals();
+  }
+});
+$('btnReset').addEventListener('click', () => { resetForm(); $('submitResult').className = 'hidden'; });
+
+// =====================================================================
+// 7. DAFTAR JURNAL, STORNO, AUDIT LOG, VERIFIKASI
+// =====================================================================
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+async function refreshLists() {
+  const [journals, audit] = await Promise.all([api.listJournals(), api.listAudit()]);
+  $('journalList').innerHTML = (journals || []).length === 0
+    ? '<p class="px-5 py-6 text-sm text-gray-500">Belum ada jurnal.</p>'
+    : journals.map(j => `
+      <article class="px-5 py-3 text-sm">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <div><span class="font-mono font-semibold">${escapeHtml(j.reference_no)}</span>
+            <span class="ml-2 text-xs px-1.5 py-0.5 rounded ${j.journal_type === 'STORNO' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}">${j.journal_type}</span>
+            ${j.reversed_by_ref ? `<span class="ml-1 text-xs px-1.5 py-0.5 rounded bg-red-100 text-alarm">dibalik oleh ${escapeHtml(j.reversed_by_ref)}</span>` : ''}
+          </div>
+          <span class="num font-semibold">Rp ${rupiah(j.total)}</span>
+        </div>
+        <p class="text-gray-600">${escapeHtml(j.transaction_date)} · ${escapeHtml(j.description)}</p>
+        <table class="w-full text-xs mt-1">${(j.lines || []).map(l => `
+          <tr><td class="${Number(l.credit) > 0 ? 'pl-6' : ''}">${l.account_code} ${escapeHtml(l.account_name)}</td>
+          <td class="num w-28">${Number(l.debit) ? rupiah(l.debit) : ''}</td><td class="num w-28">${Number(l.credit) ? rupiah(l.credit) : ''}</td></tr>`).join('')}
+        </table>
+        <p class="text-xs text-gray-500 mt-1">created_by <b>${escapeHtml(j.created_by)}</b> · ${new Date(j.created_at).toLocaleString('id-ID')}</p>
+        <p class="text-xs font-mono text-gray-500 break-all">hash ${(j.hash_checksum || '').slice(0, 24)}… · prev ${(j.prev_hash || 'GENESIS').slice(0, 12)}…</p>
+        ${j.journal_type === 'KAS_KELUAR' && !j.reversed_by_ref ? `
+          <div class="mt-2 flex gap-2">
+            <input id="reason-${j.id}" placeholder="Alasan koreksi (wajib)" class="flex-1 border border-line rounded px-2 py-1 text-xs" />
+            <button data-reverse="${j.id}" class="text-xs border border-alarm text-alarm rounded px-2 py-1 hover:bg-alarm hover:text-white">Buat jurnal pembalik</button>
+          </div>` : ''}
+      </article>`).join('');
+
+  $('auditList').innerHTML = (audit || []).map(a => `
+    <li class="px-4 py-2"><span class="text-gray-400">#${a.id}</span>
+      <b class="${a.action === 'INSERT' ? 'text-ledger' : 'text-amber-700'}">${a.action}</b> ${a.table_name}
+      <br><span class="text-gray-600">${escapeHtml(a.summary)}</span>
+      <br><span class="text-gray-400">${escapeHtml(a.actor)} · ${new Date(a.logged_at).toLocaleString('id-ID')}</span></li>`).join('')
+    || '<li class="px-4 py-6 text-gray-500">Belum ada catatan.</li>';
+}
+
+$('journalList').addEventListener('click', async e => {
+  const id = e.target.dataset.reverse;
+  if (!id) return;
+  const reason = $('reason-' + id).value.trim();
+  if (!reason) { $('reason-' + id).focus(); $('reason-' + id).classList.add('border-alarm'); return; }
+  try {
+    const r = await api.reverse(Number(id), reason);
+    showResult(true, `<b>Jurnal pembalik ${r.reference_no} berhasil dibuat.</b> Jurnal asli tetap utuh sebagai jejak audit.`);
+    await refreshLists();
+  } catch (err) { showResult(false, '<b>Ditolak server:</b> ' + err.message); }
+});
+
+$('btnVerify').addEventListener('click', async () => {
+  const box = $('verifyResult');
+  try {
+    const rows = await api.verify();
+    const bad = rows.filter(r => !r.hash_valid || !r.chain_valid);
+    box.className = 'px-5 py-2 text-sm border-b border-line ' + (bad.length ? 'bg-red-50 text-alarm' : 'bg-emerald-50 text-ledger');
+    box.textContent = bad.length
+      ? `⚠ ${bad.length} jurnal gagal verifikasi: ${bad.map(r => r.reference_no).join(', ')}`
+      : `✓ ${rows.length} jurnal POSTED terverifikasi: hash SHA-256 & rantai cocok.`;
+  } catch (err) { box.className = 'px-5 py-2 text-sm bg-red-50 text-alarm'; box.textContent = err.message; }
+});
+
+// =====================================================================
+// 8. LOGIN & INISIALISASI
+// =====================================================================
+async function startApp(user) {
+  $('loginSection').classList.add('hidden');
+  $('appSection').classList.remove('hidden');
+  $('userInfo').textContent = user.email;
+  $('btnLogout').classList.toggle('hidden', api.mode === 'DEMO');
+  accounts = await api.listAccounts();
+  resetForm();
+  await refreshLists();
+}
+
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('loginError').textContent = '';
+  try {
+    await api.login($('loginEmail').value, $('loginPassword').value);
+    await startApp(await api.getUser());
+  } catch (err) { $('loginError').textContent = err.message; }
+});
+$('btnLogout').addEventListener('click', async () => { await api.logout(); location.reload(); });
+
+(async function init() {
+  $('modeBadge').textContent = api.mode === 'DEMO' ? 'MODE DEMO · data di memori' : 'TERHUBUNG · Supabase';
+  $('modeBadge').className += api.mode === 'DEMO' ? ' border-amber-400 text-amber-700 bg-amber-50' : ' border-ledger text-ledger bg-emerald-50';
+  const user = await api.getUser();
+  if (user) startApp(user); else $('loginSection').classList.remove('hidden');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+erDiagram
+    chart_of_accounts ||--o{ journal_lines : "dipakai oleh"
+    journal_headers   ||--|{ journal_lines : "terdiri dari (min. 2 baris)"
+
+    chart_of_accounts {
+        INTEGER account_id PK
+        VARCHAR account_code UK "kode akun"
+        VARCHAR account_name "nama akun"
+        VARCHAR normal_balance "DEBIT / CREDIT"
+        VARCHAR report_classification "ASET..BEBAN"
+        BOOLEAN is_active
+    }
+    journal_headers {
+        BIGINT id PK
+        DATE transaction_date "tanggal transaksi"
+        VARCHAR reference_no UK "nomor bukti"
+        TEXT description "deskripsi"
+        VARCHAR posting_status "DRAFT / POSTED"
+    }
+    journal_lines {
+        BIGINT id PK
+        BIGINT header_id FK "ON DELETE RESTRICT"
+        INTEGER account_id FK "ON DELETE RESTRICT"
+        NUMERIC debit "CHECK >= 0"
+        NUMERIC credit "CHECK >= 0"
+    }
