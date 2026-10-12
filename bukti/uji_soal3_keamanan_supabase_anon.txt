@@ -1,0 +1,10 @@
+Uji keamanan Supabase dari browser (GitHub Pages), pengguna BELUM login (role anon,
+memakai publishable key yang memang publik). Dijalankan 12 Okt 2026 via supabase-js 2.100.1.
+
+1) supabase.rpc('rpc_create_cash_voucher', {...})          -> "permission denied for function rpc_create_cash_voucher"
+2) supabase.from('journal_headers').insert({...})            -> "permission denied for table journal_headers"
+3) supabase.from('journal_headers').select('reference_no')   -> [] (RLS aktif, tanpa policy baca -> tidak ada data bocor)
+
+Kesimpulan: walaupun publishable key terlihat di kode frontend, klien tanpa login tidak dapat
+membaca maupun menulis jurnal. Pengguna yang login hanya bisa menulis lewat fungsi RPC
+yang memvalidasi aturan bisnis; UPDATE/DELETE jurnal POSTED tetap ditolak trigger.
