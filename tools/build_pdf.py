@@ -64,10 +64,11 @@ cover = f"""
     <p><b>Basis data cloud</b><br/>Supabase (PostgreSQL) · project <code>uts-coding-akuntansi</code></p>
   </div>
   <div class="tools">
-    <b>Alat bantu yang digunakan</b> (ujian bersifat Open Book / Open AI / Open Code Sandbox):
-    PostgreSQL 16 (uji lokal), Supabase, Gemini Canvas, NotebookLM, serta asisten AI Claude
-    untuk membantu penyusunan dan pengujian kode. Seluruh kode diuji dan hasil ujinya dilampirkan
-    di folder <code>bukti/</code> pada repositori.
+    <b>Alat bantu</b><br/>
+    Sesuai naskah ("Alat Bantu Diizinkan"): <b>NotebookLM</b> dan <b>PostgreSQL Sandbox</b>
+    (PostgreSQL 16 lokal dan Supabase). Diminta langsung oleh Soal 3.1a: <b>Gemini Canvas</b>.<br/>
+    Sesuai sifat ujian <i>Open AI</i>: asisten AI <b>Claude</b> untuk membantu penyusunan dan pengujian kode.
+    Hasil pengujian dilampirkan di folder <code>bukti/</code> pada repositori.
   </div>
 </section>
 
